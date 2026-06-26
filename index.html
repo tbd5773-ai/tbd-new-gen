@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>chat tbd 0.2 </title>
+  <title>ซันเดย์สุดฉลาด 0.1 (Continuous Memory)</title>
   <style>
     * {
       margin: 0;
@@ -69,6 +69,13 @@
       color: #666666;
       margin-top: 2px;
     }
+
+    /* 🛠️ เพิ่มสไตล์ส่วนควบคุมปุ่มด้านบน */
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
     
     .status-badge {
       display: flex;
@@ -90,6 +97,26 @@
       border-radius: 50%;
       background: #000000;
       animation: pulse 1.5s infinite;
+    }
+
+    /* 🔴 ปุ่ม Reset ดีไซน์เรียบหรูสไตล์ Cyberpunk */
+    .reset-btn {
+      background: transparent;
+      border: 1px solid #333333;
+      color: #888888;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s ease;
+    }
+
+    .reset-btn:hover {
+      border-color: #ff3333;
+      color: #ff3333;
+      background: rgba(255, 51, 51, 0.05);
     }
     
     @keyframes pulse {
@@ -204,6 +231,12 @@
       border-color: #ffffff;
     }
     
+    #user-input:disabled {
+      background: #111111;
+      color: #444444;
+      cursor: not-allowed;
+    }
+    
     .send-btn {
       background: #ffffff;
       border: none;
@@ -254,15 +287,19 @@
   <div class="cyber-container">
     <div class="cyber-header">
       <div class="logo-section">
-        <div class="cyber-logo">◼️</div>
+        <div class="cyber-logo">😈️</div>
         <div>
-          <div class="title">chat tbd 0.2</div>
-          <div class="subtitle">😈</div>
+          <div class="title">ซันเดย์สุดฉลาด 0.1</div>
+          <div class="subtitle">😈 (Speed 0.0.1)</div>
         </div>
       </div>
-      <div class="status-badge">
-        <div class="status-light"></div>
-        <span>Online</span>
+      <div class="header-controls">
+        <!-- 🔴 เพิ่มปุ่ม Reset ตรงนี้ -->
+        <button class="reset-btn" id="reset-btn">Reset</button>
+        <div class="status-badge">
+          <div class="status-light"></div>
+          <span>Online</span>
+        </div>
       </div>
     </div>
     
@@ -270,12 +307,12 @@
       <div class="messages-container" id="messages-container">
         <div class="welcome-message">
           <div><strong>by tbd</strong></div>
-          <div>💬</div>
+          <div>💬 ระบบพร้อมใช้งาน</div>
         </div>
       </div>
       
       <div class="typing-indicator" id="typing-indicator">
-        <span>กำลังคิด...</span>
+        <span>กำลังคิดคำตอบ...</span>
       </div>
       
       <div class="input-area">
@@ -286,45 +323,65 @@
   </div>
   
   <script>
+    const AI_PERSONA = `คุณคือ "ซันเดย์สุดหล่อ" ต้องมีคับตามท้าย เท่านั้น ห้ามมีค่ะเด็ดขาดห้ามเด็ดขาดไม่ว่าจะยังไงก็ตามเเละคุณต้องเป็นคนที่ฉลาดมากๆเรียนเก่งเเละให้คำเเนะนำได้ดีมากๆเมื่อเเก้ปัญหาต่างๆคุณจะตอบตามหลังเมื่อแก้ปัญหาเสร็จว่า เเน่นอนหมื่นล้านเปอร์เซ็น`;
+
     class CyberAI {
-      constructor(apiUrl) {
-        this.apiUrl = apiUrl;
+      constructor(apiKey) {
+        this.apiKey = apiKey;
+        this.apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
       }
       
-      async sendMessage(userText) {
+      // 🔄 ปรับมารับค่าโครงสร้างประวัติการคุยทั้งหมด (messagesHistory) แทนข้อความเดี่ยว
+      async sendMessage(messagesHistory) {
         try {
-          const url = `${this.apiUrl}?text=${encodeURIComponent(userText)}`;
-          console.log('Calling API:', url);
-          
-          const response = await fetch(url);
+          const response = await fetch(this.apiUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: 'llama-3.1-8b-instant', // โมเดลรุ่นล่าสุดของค่าย Groq
+              messages: messagesHistory
+            })
+          });
+
           if (!response.ok) {
+            if (response.status === 429) {
+              throw new Error("ยิงคำขอถี่เกินไปชั่วคราว กรุณาเว้นระยะแปบนึงนะ");
+            }
             throw new Error(`API Error ${response.status}: ${response.statusText}`);
           }
           
           const data = await response.json();
-          console.log('Raw API Response:', data);
           return data;
         } catch (error) {
           console.error('API Error:', error);
           return {
             error: true,
-            message: `⚠️ Connection Fail: ${error.message}\nไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง`
+            message: `⚠️ เชื่อมต่อล้มเหลว: ${error.message}`
           };
         }
       }
     }
     
-    const cyberAI = new CyberAI('https://apis.davidcyril.name.ng/ai/felo');
+    const MY_API_KEY = "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";
+    const cyberAI = new CyberAI(MY_API_KEY);
     
     const messagesContainer = document.getElementById('messages-container');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
+    const resetBtn = document.getElementById('reset-btn');
     const typingIndicator = document.getElementById('typing-indicator');
     
     let isSending = false;
     let welcomeRemoved = false;
     
-    // ฟังก์ชันสร้างกล่องข้อความและแสดงผลแบบ Streaming (พิมพ์ทีละตัวอักษร)
+    // 📦 อาร์เรย์หลักสำหรับจดจำประวัติบทสนทนาแบบ Real-time
+    let chatHistory = [
+      { role: 'system', content: AI_PERSONA }
+    ];
+    
     function addMessageAnimated(text, isUser, timestamp = new Date()) {
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
@@ -337,7 +394,7 @@
       
       const timeDiv = document.createElement('div');
       timeDiv.className = 'message-time';
-      timeDiv.innerText = `${isUser ? 'คุณ' : 'chat tbd'} • ${timeStr}`;
+      timeDiv.innerText = `${isUser ? 'คุณ' : 'ซันเดย์สุดหล่อ'} • ${timeStr}`;
       
       innerDiv.appendChild(contentDiv);
       innerDiv.appendChild(timeDiv);
@@ -346,13 +403,12 @@
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
       if (isUser) {
-        // ข้อความฝั่งผู้ใช้ ให้แสดงเต็มทันที
         contentDiv.textContent = text;
       } else {
-        // ข้อความฝั่ง AI ใช้เอฟเฟกต์พิมพ์ทีละตัวอักษรแบบ ChatGPT
         let i = 0;
         isSending = true; 
         sendBtn.disabled = true;
+        userInput.disabled = true;
         
         const timer = setInterval(() => {
           if (i < text.length) {
@@ -361,43 +417,21 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
           } else {
             clearInterval(timer);
-            // พิมพ์เสร็จแล้ว คลายล็อกปุ่มส่ง
             isSending = false;
             sendBtn.disabled = false;
+            userInput.disabled = false;
             userInput.focus();
           }
-        }, 20); // ความเร็วในการพ่นตัวอักษร (20ms ต่อ 1 ตัวอักษร) วิ่งเนียนตามากครับ
+        }, 5);
       }
     }
     
     function extractAIResponse(data) {
       if (data.error) return data.message;
-      if (typeof data === 'string') return data;
-      
-      const possibleFields = [
-        'response', 'text', 'message', 'content', 'reply', 'answer',
-        'generated_text', 'output', 'result', 'data', 'candidates', 'choices'
-      ];
-      
-      for (const field of possibleFields) {
-        if (data[field]) {
-          if (field === 'candidates' && Array.isArray(data[field]) && data[field][0]) {
-            const candidate = data[field][0];
-            if (candidate.content) return candidate.content;
-            if (candidate.text) return candidate.text;
-            return JSON.stringify(candidate);
-          }
-          if (field === 'choices' && Array.isArray(data[field]) && data[field][0]) {
-            const choice = data[field][0];
-            if (choice.message?.content) return choice.message.content;
-            if (choice.text) return choice.text;
-            return JSON.stringify(choice);
-          }
-          if (typeof data[field] === 'string') return data[field];
-          if (typeof data[field] === 'object') return JSON.stringify(data[field]);
-        }
+      if (data.choices && data.choices[0]?.message?.content) {
+        return data.choices[0].message.content;
       }
-      return "🤖 ได้รับข้อมูลสำเร็จ";
+      return "🤖 ได้รับข้อมูลสำเร็จแต่ระบบไม่สามารถถอดรหัสข้อความได้";
     }
     
     async function sendMessage() {
@@ -413,27 +447,57 @@
       userInput.value = '';
       userInput.style.height = 'auto';
       
-      // แสดงข้อความฝั่งผู้ใช้ทันที
       addMessageAnimated(text, true);
+      
+      // 1. บันทึกคำถามล่าสุดของผู้ใช้ลงในความจำของระบบก่อน
+      chatHistory.push({ role: 'user', content: text });
       
       isSending = true;
       sendBtn.disabled = true;
+      userInput.disabled = true;
       typingIndicator.classList.add('active');
       
       try {
-        const response = await cyberAI.sendMessage(text);
+        // 2. ส่งประวัติการคุยทั้งหมดไปที่ Groq เพื่อให้บอทไม่ลืมบริบทเก่า
+        const response = await cyberAI.sendMessage(chatHistory);
         const aiText = extractAIResponse(response);
         
         typingIndicator.classList.remove('active');
-        // เรียกใช้งานเอฟเฟกต์พ่นคำสำหรับ AI คำตอบ
         addMessageAnimated(aiText, false);
+        
+        // 3. ถ้าคุยสำเร็จ ให้บันทึกคำตอบของบอทลงในระบบความจำ เพื่อการคุยต่อครั้งหน้า
+        if (!response.error) {
+          chatHistory.push({ role: 'assistant', content: aiText });
+        }
       } catch (error) {
         typingIndicator.classList.remove('active');
-        addMessageAnimated(`⚠️ เกิดข้อผิดพลาดระบบ: ${error.message}`, false);
+        addMessageAnimated(`⚠️ ข้อผิดพลาด: ${error.message}`, false);
         isSending = false;
         sendBtn.disabled = false;
+        userInput.disabled = false;
       }
     }
+
+    // 🔴 ฟังก์ชันเคลียร์ความทรงจำเมื่อกดปุ่ม Reset
+    resetBtn.addEventListener('click', function() {
+      if (isSending) return; // ล็อคไม่ให้กดตอนบอทกำลังพิมพ์ตอบ
+
+      // ล้างข้อมูลความจำเดิม กลับไปเริ่มต้นระบบบทบาทดั้งเดิม
+      chatHistory = [
+        { role: 'system', content: AI_PERSONA }
+      ];
+
+      // รีเซ็ตหน้าจอแชทใหม่หมด
+      messagesContainer.innerHTML = `
+        <div class="welcome-message">
+          <div><strong>by tbd</strong></div>
+          <div>🗑️ ล้างความจำเรียบร้อย! เริ่มต้นบทสนทนาใหม่กับซันเดย์สุดหล่อได้เลย</div>
+        </div>
+      `;
+      welcomeRemoved = false;
+      userInput.value = '';
+      userInput.focus();
+    });
     
     function autoResizeTextarea() {
       userInput.style.height = 'auto';
